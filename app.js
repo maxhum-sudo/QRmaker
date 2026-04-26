@@ -37,7 +37,7 @@ function getCanvas() {
 async function generateQr() {
   setError("");
 
-  if (typeof QRCode === "undefined" || !QRCode?.toCanvas) {
+  if (typeof QRCode === "undefined") {
     setError("QR library failed to load. Refresh and try again.");
     return;
   }
@@ -51,21 +51,19 @@ async function generateQr() {
 
   clearQr();
 
-  const canvas = document.createElement("canvas");
-  canvas.width = 256;
-  canvas.height = 256;
-  els.qrContainer.appendChild(canvas);
-
   try {
-    await QRCode.toCanvas(canvas, value, {
+    // `qrcodejs` draws into the container (canvas or img depending on support).
+    // Keep size fixed for simplicity.
+    const qr = new QRCode(els.qrContainer, {
+      text: value,
       width: 256,
-      margin: 1,
-      errorCorrectionLevel: "M",
-      color: {
-        dark: "#111111",
-        light: "#ffffff",
-      },
+      height: 256,
+      colorDark: "#111111",
+      colorLight: "#ffffff",
+      correctLevel: QRCode.CorrectLevel.M,
     });
+    // `qr` is intentionally unused; instance attaches to container.
+    void qr;
     els.downloadBtn.disabled = false;
   } catch (err) {
     clearQr();
@@ -75,9 +73,10 @@ async function generateQr() {
 
 function downloadPng() {
   const canvas = getCanvas();
-  if (!canvas) return;
+  const img = els.qrContainer.querySelector("img");
+  const url = canvas?.toDataURL?.("image/png") || img?.src;
+  if (!url) return;
 
-  const url = canvas.toDataURL("image/png");
   const a = document.createElement("a");
   a.href = url;
   a.download = "qr.png";
